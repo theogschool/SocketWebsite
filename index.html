@@ -1,0 +1,96 @@
+<html>
+ <head>
+  <script>
+   var intervalId;
+   
+   //Get the cookie from the backend and go to login if none are set
+   function getCookie(){
+    var cookie = new XMLHttpRequest();
+    cookie.open('GET', "/login");
+    cookie.onload = function () {
+     var cookieData = JSON.parse(this.response);
+     var authorized = cookieData.authorized;
+     var username = cookieData.username;
+     if(authorized == 'true'){
+      intervalId = setInterval(feed, 60000, username);
+      feed(username);
+     }
+     else{
+      login();
+     }
+    };
+    
+    cookie.send(null);
+   }
+
+   //User types in login info. This will then be sent to the backend to be verified
+   function login(){
+    document.body.innerHTML = "<p>3010tter:</p>";
+    document.body.innerHTML = document.body.innerHTML + '<form action="javascript:sendLogin(username.value, password.value)"><input type="text" id="username" name="username"><input type="text" id="password" name="password"><input type="submit" value="Login"></form>';
+   }
+   
+   function sendLogin(username, password){
+    var login = new XMLHttpRequest();
+    var loginInfo = '{\n"username": "' + username + '",\n"password": "' + password + '"\n}';
+    login.open("POST", '/login');
+    login.onreadystatechange = function(){
+     if(this.readyState === XMLHttpRequest.DONE && this.status === 200){
+      getCookie();
+     }
+    };
+    
+    login.send(loginInfo);
+    
+   }
+   
+   //Provide the feed for the given user. Allows user to type into a text box which is sent to the back end
+   function feed(username){
+    document.body.innerHTML = '<p>3010tter:</p>'
+    document.body.innerHTML = document.body.innerHTML + '<form action="javascript:sendTweet(tweet.value)"><label for="tweet">Hi ' + username + ' New tweet:</label><input type="text" id="tweet" name="tweet"><input type="submit" value="Send"></form>';
+    document.body.innerHTML = document.body.innerHTML + '<form action="javascript:logout()"><input type="submit" value="Logout"></form>';
+    var tweets = new XMLHttpRequest();
+    tweets.open('GET', '/feed');
+    tweets.onload = function () {
+     var tweetData = JSON.parse(this.response);
+     for (i = tweetData.length - 1; i >= 0; i--){
+      document.body.innerHTML = document.body.innerHTML + '<p>' + tweetData[i].user + ': ' + tweetData[i].tweet + '</p>';
+     }
+    };
+    
+    tweets.send(null);
+   }
+   
+   //Send a tweet to the backend of the server to be stored
+   function sendTweet(tweet){
+    var tweetXML = new XMLHttpRequest();
+    var tweetInfo = '{\n"tweet": "' + tweet + '"\n}';
+    tweetXML.open("POST", '/feed');
+    tweetXML.onreadystatechange = function(){
+     if(this.readyState === XMLHttpRequest.DONE && this.status === 200){
+      clearInterval(intervalId);
+      getCookie();
+     }
+    };
+    
+    tweetXML.send(tweetInfo);
+   }
+   
+   //Sends a login call to the backend to delete cookies
+   function logout(){
+    var logout = new XMLHttpRequest();
+    logout.open("POST", '/logout');
+    logout.onreadystatechange = function(){
+     if(this.readyState === XMLHttpRequest.DONE && this.status === 200){
+      clearInterval(intervalId);
+      getCookie();
+     }
+    };
+    
+    logout.send(null);
+   }
+  </script>
+ </head>
+ <body onload="getCookie()">
+ <p>3010tter:</p>
+ </body>
+</html>
